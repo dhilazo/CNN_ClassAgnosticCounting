@@ -1,8 +1,6 @@
 import os
 
-import numpy as np
 import torch
-import torch.nn.functional as F  # TODO no nn. imports
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torch import nn
@@ -59,30 +57,14 @@ def create_grid(inputs, num_images, image_grid_shape, labels):
     return new_inputs, labels
 
 
-def get_templates_and_counts(template_dict, labels, classes, template_shape=None):
-    template_list = []
-    counts_list = []
-    for input in labels:
-        unique_values, counts = np.unique(input, return_counts=True)
-        counts_list.append(counts)
-
-        templates = []
-        for value in unique_values:
-            if not template_shape:
-                templates.append(F.pad(template_dict[classes[value.item()]], pad=[32, 32, 32, 32], mode='constant'))
-            else:
-                templates.append(
-                    F.interpolate(torch.Tensor([template_dict[classes[value.item()]].numpy()]), size=template_shape))
-        template_list.append(templates)
-    return template_list, counts
-
-
 if __name__ == "__main__":
     run_name = 'SiameseNet_Count_Pad'
     network_model = SiameseNet
     epochs = 100
     image_grid_distribution = (3, 3)
     batch_size = 4
+
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     transform = transforms.Compose(
         [transforms.ToTensor(),
@@ -99,54 +81,13 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
     model = network_model(output_size=1)
+    model = model.to(device)
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    trainer = Trainer(model, criterion, optimizer, run_name)
+    trainer = Trainer(model, criterion, optimizer, run_name, device=device)
     trainer.train(epochs, train_loader, val_loader)
 
-    model.eval()
+    torch.save(model.state_dict(), './trained_models/' + run_name + '.pt')
 
-    max_test_loss = 0
-    test_accumulated_loss = 0
-    total_batches = 0
-    with torch.no_grad():
-        for data in test_loader:
-            image_grids, templates, counts = data
-
-            templates = np.asarray(templates, dtype=object)
-            for i in range(len(templates)):
-                outputs = model(image_grids, templates[i])
-
-                loss = criterion(outputs, counts[:, i])
-
-                if loss > max_test_loss:
-                    max_test_loss = loss
-                test_accumulated_loss += loss
-                total_batches += 1
-
-    print(f'Average loss: {test_accumulated_loss / total_batches}')
-    print(f'Max loss: {max_test_loss}')
-
-    # class_correct = list(0. for i in range(10))
-    # class_total = list(0. for i in range(10))
-    # with torch.no_grad():
-    #     for data in test_loader:
-    #         images, labels = data
-    #         if template_dict is not None:
-    #             templates = torch.stack([template_dict[classes[label.item()]] for label in labels])
-    #             outputs = model(images, templates)
-    #         else:
-    #             outputs = model(images, images)
-    #         _, predicted = torch.max(outputs, 1)
-    #         c = (predicted == labels).squeeze()
-    #         for i in range(images):
-    #             label = labels[i]
-    #             class_correct[label] += c[i].item()
-    #             class_total[label] += 1
-    #
-    # for i in range(10):
-    #     print('Accuracy of %5s : %2d %%' % (
-    #         classes[i], 100 * class_correct[i] / class_total[i]))
-    #
-    # plt.show()
+    trainer.evaluate(test_loader)
