@@ -1,8 +1,8 @@
 import os
 
 
-def create_log_dirs(run_name):
-    path = os.path.join('.', 'logs', run_name)
+def create_dirs(dir_name):
+    path = os.path.join('.', dir_name)
     if not os.path.exists(path):
         os.makedirs(path)
     return path

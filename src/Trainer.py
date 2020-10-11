@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from utils.system import create_log_dirs, join_path
+from utils.system import join_path, create_dirs
 
 
 class Trainer:
@@ -14,7 +14,7 @@ class Trainer:
         self.optimizer = optimizer
         self.device = device
 
-        logs_path = create_log_dirs(run_name)
+        logs_path = create_dirs(f'logs/{run_name}')
         self.train_writer = SummaryWriter(join_path(logs_path, 'train'))
         self.val_writer = SummaryWriter(join_path(logs_path, 'val'))
 

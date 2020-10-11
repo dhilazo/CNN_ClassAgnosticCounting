@@ -1,5 +1,3 @@
-import os
-
 import torch
 import torch.optim as optim
 import torchvision.transforms as transforms
@@ -8,7 +6,8 @@ from torch.utils.data import random_split, DataLoader
 
 from CIFAR10CountDataset import CIFAR10CountDataset
 from Trainer import Trainer
-from models.siamese_model import SiameseNet
+from models.siamese_resnet_model import SiameseResNet
+from utils import system
 
 
 def save_template(train_loader, classes):
@@ -24,45 +23,12 @@ def save_template(train_loader, classes):
                 torch.save(img, './data/templates/' + classes[label] + '.pt')
 
 
-def create_log_dirs(run_name):
-    path = os.path.join('.', 'logs', run_name)
-    if not os.path.exists(path):
-        os.makedirs(path)
-    return path
-
-
-def create_template_dict(classes):
-    template_dict = {}
-    for class_name in classes:
-        template_dict[class_name] = torch.load(f'./data/templates/{class_name}.pt')
-
-    return template_dict
-
-
-def create_grid(inputs, num_images, image_grid_shape, labels):
-    inputs = torch.reshape(inputs, (num_images, -1, inputs.shape[-3], inputs.shape[-2], inputs.shape[-1]))
-    labels = torch.reshape(labels, (num_images, -1))
-    new_inputs = torch.zeros(
-        (num_images, 3, inputs.shape[-2] * image_grid_shape[0], inputs.shape[-1] * image_grid_shape[1]))
-    for i, input in enumerate(inputs):
-        rows = []
-        for row in range(image_grid_shape[0]):
-            index = row * image_grid_shape[1]
-            image_row = torch.cat((input[index], input[index + 1], input[index + 2]), -1)
-            rows.append(image_row)
-        image_grid = torch.cat(tuple(rows), -2)
-        new_inputs[i] = image_grid
-        # imshow(new_inputs[i])
-        # plt.show()
-    return new_inputs, labels
-
-
 if __name__ == "__main__":
-    run_name = 'SiameseNet_Count_Pad'
-    network_model = SiameseNet
+    run_name = 'SiameseNet_Count_Pad(ResNet Batch 32)'
+    network_model = SiameseResNet
     epochs = 100
     image_grid_distribution = (3, 3)
-    batch_size = 4
+    batch_size = 32
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -88,6 +54,7 @@ if __name__ == "__main__":
     trainer = Trainer(model, criterion, optimizer, run_name, device=device)
     trainer.train(epochs, train_loader, val_loader)
 
+    system.create_dirs('trained_models')
     torch.save(model.state_dict(), './trained_models/' + run_name + '.pt')
 
     trainer.evaluate(test_loader)
