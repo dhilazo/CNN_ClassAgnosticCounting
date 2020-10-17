@@ -14,7 +14,8 @@ def create_image_grid(images, image_grid_shape):
 
 
 def resize_image(image, final_shape):
-    pass  # TODO
+    image.thumbnail(final_shape, Image.ANTIALIAS)
+    return image
 
 
 def pad_image(image, final_shape):
