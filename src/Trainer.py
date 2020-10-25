@@ -56,7 +56,7 @@ class Trainer:
                     if loss_count % batch_report == batch_report - 1:  # print every batch_report mini-batches
                         print(
                             f'[{epoch + 1}, {loss_count + 1}/{len(train_loader) * len(templates)}] '
-                            f'loss: {running_loss / batch_report}')
+                            f'loss: {running_loss / batch_report}', flush=True)
                         running_loss = 0.0
 
             val_loss = self.quick_validate(val_loader)  # TODO save model
@@ -67,13 +67,13 @@ class Trainer:
 
             if torch.cuda.is_available():
                 torch.cuda.synchronize(self.device)
-            print(f'Train loss: {train_mean_loss} Val loss: {val_mean_loss}')
-            print(f'Epoch time: {round(time.time() - since_epoch, 2)}s')
+            print(f'Train loss: {train_mean_loss} Val loss: {val_mean_loss}', flush=True)
+            print(f'Epoch time: {round(time.time() - since_epoch, 2)}s', flush=True)
 
             self.train_writer.add_scalar('loss', train_mean_loss, epoch + 1)
             self.val_writer.add_scalar('loss', val_mean_loss, epoch + 1)
 
-        print('Finished Training')
+        print('Finished Training', flush=True)
 
     def quick_validate(self, val_loader):
         self.model.eval()

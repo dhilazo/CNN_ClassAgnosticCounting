@@ -12,11 +12,11 @@ transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-test_set = CIFAR10CountDataset('./data', image_grid_distribution, train=False, transformations=transform)
+test_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, train=False, transformations=transform)
 test_loader = DataLoader(test_set, batch_size=32, shuffle=False, num_workers=0)
 
 model = SiameseResNet(output_size=1)
-model.load_state_dict(torch.load("./trained_models/SiameseNet_Count_Pad(ResNet Batch 32)_batch.pt"))
+model.load_state_dict(torch.load("./trained_models/SiameseResNet_Resize.pt"))
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)

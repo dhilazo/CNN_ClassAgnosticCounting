@@ -24,7 +24,7 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'SiameseNet_Count_Pad(ResNet Batch 32)'
+    run_name = 'SiameseResNet_RepeatWithDropout'
     network_model = SiameseResNet
     epochs = 100
     image_grid_distribution = (3, 3)
@@ -36,8 +36,12 @@ if __name__ == "__main__":
         [transforms.ToTensor(),
          transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    train_set = CIFAR10CountDataset('./data', image_grid_distribution, train=True, transformations=transform)
-    test_set = CIFAR10CountDataset('./data', image_grid_distribution, train=False, transformations=transform)
+    print("Creating DataLoaders.", flush=True)
+
+    train_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='repeat', train=True,
+                                    transformations=transform)
+    test_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='repeat', train=False,
+                                   transformations=transform)
 
     train_len = len(train_set)
     train_set, val_set = random_split(train_set, [int(train_len * 0.8), int(train_len * 0.2)])
@@ -46,15 +50,17 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=0)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
+    print("DataLoaders created.", flush=True)
+
     model = network_model(output_size=1)
     model = model.to(device)
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
+    system.create_dirs('trained_models')
     trainer = Trainer(model, criterion, optimizer, run_name, device=device)
     trainer.train(epochs, train_loader, val_loader)
 
-    system.create_dirs('trained_models')
     torch.save(model.state_dict(), './trained_models/' + run_name + '.pt')
 
     trainer.evaluate(test_loader)

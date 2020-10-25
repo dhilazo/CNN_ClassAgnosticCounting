@@ -4,7 +4,8 @@ import numpy as np
 from torch import load
 from torchvision import datasets
 
-from utils.image import create_image_grid, resize_image, pad_image, open_image
+from utils.image import create_image_grid, resize_image, pad_image, open_image, repeat_image
+from utils.system import join_path
 
 
 class CIFAR10CountDataset(datasets.CIFAR10):
@@ -19,14 +20,17 @@ class CIFAR10CountDataset(datasets.CIFAR10):
             ``cifar-10-batches-py`` exists or will be saved to if download is set to True.
         - image_grid_distribution (tuple): Tuple indicating the image distribution in the grid.
             E.g, (3,3) indicating a 3x3 grid of concatenated images
-        - resize_template (bool, optional): If True, resizes the templates to the same size as the image grid,
-            otherwise sets the template in the middle and adds padding around.
+        - template_view (string, optional): can take values:
+            - 'resize': resizess the templates to the same size as the image grid
+            - 'padding'(default): sets the template in the center and adds padding around.
+            - 'repeat': repeats the template through the image space like a mosaic
         - train (bool, optional): If True, creates dataset from training set, otherwise
             creates from test set.
         - transformations (callable, optional): A function/transform that takes in an PIL image
             and returns a transformed version.
 
     Attributes:
+        - root (string): Where root arg is stored.
         - transformations (callable): Where transform arg is stored.
         - n_classes (int): Indicates the number of classes contained by the dataset.
         - image_grid_distribution (tuple): Where image_grid_distribution arg is stored.
@@ -34,11 +38,12 @@ class CIFAR10CountDataset(datasets.CIFAR10):
         - images_per_grid (int): Number of images contained by each image grid.
         - template_dict (dictionary): Contains a template image for each class name.
         - class_names (list): List of class names for each index label.
-        - resize_template (bool): Where resize_template arg is stored.
+        - resize_template (string): Where resize_template arg is stored.
     """
 
-    def __init__(self, root, image_grid_distribution, resize_template=False, train=True, transformations=None):
+    def __init__(self, root, image_grid_distribution, template_view="padding", train=True, transformations=None):
         super().__init__(root, train, download=True)
+        self.root = root
         self.transformations = transformations
         self.n_classes = 10
         self.image_grid_distribution = image_grid_distribution
@@ -46,7 +51,7 @@ class CIFAR10CountDataset(datasets.CIFAR10):
         self.images_per_grid = np.prod(self.image_grid_distribution)
         self.class_names = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
         self.template_dict = self.create_template_dict(self.class_names)
-        self.resize_template = resize_template
+        self.template_view = template_view
 
     def __len__(self):
         return super().__len__()
@@ -78,10 +83,12 @@ class CIFAR10CountDataset(datasets.CIFAR10):
             template = self.template_dict[class_name]
 
             # Make template have the same shape as the image grid
-            if self.resize_template:
+            if self.template_view == 'resize':
                 template = resize_image(template, self.image_grid_shape[-2:])
-            else:
+            elif self.template_view == 'padding':
                 template = pad_image(template, self.image_grid_shape[-2:])
+            elif self.template_view == 'repeat':
+                template = repeat_image(template, self.image_grid_shape[-2:])
 
             if self.transformations is not None:
                 template = self.transformations(template)
@@ -90,12 +97,11 @@ class CIFAR10CountDataset(datasets.CIFAR10):
 
         return image_grid, templates, counts
 
-    @staticmethod
-    def create_template_dict(classes, to_tensor=False):
+    def create_template_dict(self, classes, to_tensor=False):
         template_dict = {}
         for class_name in classes:
             if to_tensor:
-                template_dict[class_name] = load(f'./data/templates/{class_name}.pt')
+                template_dict[class_name] = load(join_path(self.root, f'templates/{class_name}.pt'))
             else:
-                template_dict[class_name] = open_image(f'./data/templates/{class_name}.jpg')
+                template_dict[class_name] = open_image(join_path(self.root, f'templates/{class_name}.jpg'))
         return template_dict
