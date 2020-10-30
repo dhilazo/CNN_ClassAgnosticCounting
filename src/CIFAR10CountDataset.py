@@ -47,7 +47,7 @@ class CIFAR10CountDataset(datasets.CIFAR10):
         self.transformations = transformations
         self.n_classes = 10
         self.image_grid_distribution = image_grid_distribution
-        self.image_grid_shape = (3, image_grid_distribution[0] * 32, image_grid_distribution[1] * 32)
+        self.image_grid_shape = (3, image_grid_distribution[0] * 96, image_grid_distribution[1] * 96)
         self.images_per_grid = np.prod(self.image_grid_distribution)
         self.class_names = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
         self.template_dict = self.create_template_dict(self.class_names)
@@ -65,6 +65,7 @@ class CIFAR10CountDataset(datasets.CIFAR10):
         labels = []
         for index in indices:
             image, label = super().__getitem__(index)
+            image = resize_image(image, (96, 96))
             images.append(image)
             labels.append(label)
 
@@ -81,7 +82,7 @@ class CIFAR10CountDataset(datasets.CIFAR10):
         templates = []
         for class_name in self.class_names:
             template = self.template_dict[class_name]
-
+            template = resize_image(template, (96, 96))
             # Make template have the same shape as the image grid
             if self.template_view == 'resize':
                 template = resize_image(template, self.image_grid_shape[-2:])
@@ -89,6 +90,8 @@ class CIFAR10CountDataset(datasets.CIFAR10):
                 template = pad_image(template, self.image_grid_shape[-2:])
             elif self.template_view == 'repeat':
                 template = repeat_image(template, self.image_grid_shape[-2:])
+            elif self.template_view == 'raw':
+                pass
 
             if self.transformations is not None:
                 template = self.transformations(template)

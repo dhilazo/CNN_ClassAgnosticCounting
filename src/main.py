@@ -24,7 +24,7 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'SiameseResNet_RepeatWithDropout'
+    run_name = 'test'
     network_model = SiameseResNet
     epochs = 100
     image_grid_distribution = (3, 3)
@@ -38,9 +38,9 @@ if __name__ == "__main__":
 
     print("Creating DataLoaders.", flush=True)
 
-    train_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='repeat', train=True,
+    train_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='raw', train=True,
                                     transformations=transform)
-    test_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='repeat', train=False,
+    test_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='raw', train=False,
                                    transformations=transform)
 
     train_len = len(train_set)
