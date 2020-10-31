@@ -3,7 +3,7 @@ import torchvision.transforms as transforms
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
-from CIFAR10CountDataset import CIFAR10CountDataset
+from datasets.cifar10_count_dataset import CIFAR10CountDataset
 from Trainer import Trainer
 from models.siamese_resnet_model import SiameseResNet
 

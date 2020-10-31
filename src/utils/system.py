@@ -10,3 +10,7 @@ def create_dirs(dir_name):
 
 def join_path(path, *paths):
     return os.path.join(path, *paths)
+
+
+def list_files(path):
+    return os.listdir(path)

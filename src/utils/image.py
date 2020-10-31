@@ -36,3 +36,8 @@ def repeat_image(image, final_shape):
 
 def open_image(path):
     return Image.open(path)
+
+
+def thumbnail_image(image, final_shape):
+    image.thumbnail(final_shape, Image.ANTIALIAS)
+    return image

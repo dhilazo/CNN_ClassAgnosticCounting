@@ -4,7 +4,7 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import random_split, DataLoader
 
-from CIFAR10CountDataset import CIFAR10CountDataset
+from datasets.cifar10_count_dataset import CIFAR10CountDataset
 from Trainer import Trainer
 from models.siamese_resnet_model import SiameseResNet
 from utils import system
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     network_model = SiameseResNet
     epochs = 100
     image_grid_distribution = (3, 3)
-    batch_size = 32
+    batch_size = 16
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
