@@ -8,7 +8,8 @@ from utils.system import join_path, list_files
 class HumanCountDataset(Dataset):
     """
     The HumanCountDataset dataset contains surveillance cameras images from shanghai which can be used for crowd
-    counting.
+    counting. It is made up of two datasets labelled as part A and part B. In part A, there are 300 images for
+    training and 182 images for testing while Part B has 400 training images and 316 testing images.
     A sample from this dataset will return the image and the amount of people captured by it.
 
     Args:
