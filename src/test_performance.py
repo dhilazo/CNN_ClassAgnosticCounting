@@ -4,7 +4,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 
 from datasets.cifar10_count_dataset import CIFAR10CountDataset
-from Trainer import Trainer
+from trainer import Trainer
 from models.siamese_resnet_model import SiameseResNet
 
 image_grid_distribution = (3, 3)

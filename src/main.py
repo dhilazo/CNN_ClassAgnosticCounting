@@ -4,9 +4,9 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import random_split, DataLoader
 
-from datasets.cifar10_count_dataset import CIFAR10CountDataset
-from Trainer import Trainer
-from models.siamese_resnet_model import SiameseResNet
+from datasets.saved_cifar10_count_dataset import SavedCIFAR10CountDataset
+from models.etcnet_model import ETCNet
+from trainer import Trainer
 from utils import system
 
 
@@ -24,24 +24,20 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'test'
-    network_model = SiameseResNet
+    run_name = 'ETCNet'
+    network_model = ETCNet
     epochs = 100
     image_grid_distribution = (3, 3)
     batch_size = 16
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    transform = transforms.Compose(
-        [transforms.ToTensor(),
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform = transforms.Compose([transforms.ToTensor()])
 
     print("Creating DataLoaders.", flush=True)
-
-    train_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='raw', train=True,
-                                    transformations=transform)
-    test_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, template_view='raw', train=False,
-                                   transformations=transform)
+    data_root = './data/CIFAR10Count'
+    train_set = SavedCIFAR10CountDataset(data_root, train=True, transform=transform)
+    test_set = SavedCIFAR10CountDataset(data_root, train=False, transform=transform)
 
     train_len = len(train_set)
     train_set, val_set = random_split(train_set, [int(train_len * 0.8), int(train_len * 0.2)])
@@ -54,6 +50,8 @@ if __name__ == "__main__":
 
     model = network_model(output_size=1)
     model = model.to(device)
+    if isinstance(model, ETCNet):
+        model.load_vae('./trained_models/ConvVAE.pt')
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 

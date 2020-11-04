@@ -1,7 +1,7 @@
+import numpy as np
 from PIL import Image
 from torchvision import datasets
 
-from utils.image import thumbnail_image
 from utils.system import join_path, list_files
 
 
@@ -29,7 +29,7 @@ class SavedCIFAR10CountDataset(datasets.CIFAR10):
 
     """
 
-    def __init__(self, root,  train=True, transform=None):
+    def __init__(self, root, train=True, transform=None):
         self.root = root
         self.class_names = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
         self.templates_path = join_path(self.root, 'templates')
@@ -51,7 +51,8 @@ class SavedCIFAR10CountDataset(datasets.CIFAR10):
         im = Image.open(join_path(self.root, 'images', self.files_list[index]))
         templates = self.open_templates()
         counts = self.count_lines[index].split(' ')
-        counts = [int(string) for string in counts]
+        counts = np.asarray([int(string) for string in counts], dtype=np.float32)
+        counts = counts.reshape((counts.shape[0], 1))
 
         if self.transform is not None:
             im = self.transform(im)
