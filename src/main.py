@@ -24,7 +24,7 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'ETCNet'
+    run_name = 'test'
     network_model = ETCNet
     epochs = 100
     image_grid_distribution = (3, 3)
@@ -51,7 +51,8 @@ if __name__ == "__main__":
     model = network_model(output_size=1)
     model = model.to(device)
     if isinstance(model, ETCNet):
-        model.load_vae('./trained_models/ConvVAE.pt')
+        model.load_vae(
+            ['./trained_models/ConvVAE_r.pt', './trained_models/ConvVAE_g.pt', './trained_models/ConvVAE_b.pt'])
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 

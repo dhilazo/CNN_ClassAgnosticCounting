@@ -16,7 +16,7 @@ from utils.system import join_path, create_dirs
 
 
 class VAETrainer:
-    def __init__(self, model, criterion, optimizer, run_name, device='cpu'):
+    def __init__(self, model, criterion, optimizer, run_name, device=torch.device('cpu')):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer

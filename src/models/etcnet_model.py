@@ -39,24 +39,33 @@ class ETCNet(nn.Module):
     def __init__(self, output_size=10):
         super(ETCNet, self).__init__()
 
-        self.vae = ConvVAE()
-        for p in self.vae.parameters():
-            p.requires_grad = False
-        self.vae.train(False)
+        self.vae_r = ConvVAE(channels=1)
+        self.vae_g = ConvVAE(channels=1)
+        self.vae_b = ConvVAE(channels=1)
+        for vae in [self.vae_r, self.vae_g, self.vae_b]:
+            for p in vae.parameters():
+                p.requires_grad = False
+            vae.train(False)
 
         self.resnet_model = resnet50(pretrained=True)
         self.resnet_model.fc = FullyConnectedLayers()
         self.output = nn.Linear(128, output_size)
 
     def forward(self, x, x_object):
-        mu, logvar = self.vae.encoder(x_object)
-        template_weights = self.vae.reparametrize(mu, logvar)  # TODO create 3 VAE 1 per channel
-        template_weights = template_weights[0].repeat(3, 1, 1, 1)
+        template_weights_list = []
+        for i, vae in enumerate([self.vae_r, self.vae_g, self.vae_b]):
+            x_channel = x_object[:, i, :, :]
+            x_channel = x_channel.reshape(x_channel.shape[0], 1, x_channel.shape[1], x_channel.shape[2])
+            mu, logvar = vae.encoder(x_channel)
+            template_weights = vae.reparametrize(mu, logvar)
+            template_weights_list.append(template_weights[0])
+        template_weights = torch.stack(template_weights_list)
         template_weights = template_weights.permute(1, 0, 2, 3)
         self.resnet_model.conv1.weight = torch.nn.Parameter(template_weights, requires_grad=False)
         x = self.resnet_model(x)
         x = self.output(x)
         return x
 
-    def load_vae(self, path):
-        self.vae.load_state_dict(torch.load(path))
+    def load_vae(self, paths):
+        for vae, path in zip([self.vae_r, self.vae_g, self.vae_b], paths):
+            vae.load_state_dict(torch.load(path))
