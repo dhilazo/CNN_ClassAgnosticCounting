@@ -59,7 +59,7 @@ class Trainer:
                             f'loss: {running_loss / batch_report}', flush=True)
                         running_loss = 0.0
 
-            val_loss = self.quick_validate(val_loader)  # TODO save models
+            val_loss = self.quick_validate(val_loader)
             torch.save(self.model.state_dict(), './trained_models/' + self.run_name + '_batch.pt')
 
             train_mean_loss = np.mean(train_loss)

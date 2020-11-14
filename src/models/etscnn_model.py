@@ -29,15 +29,15 @@ class FullyConnectedLayers(nn.Module):
         return x
 
 
-class ETCNet(nn.Module):
+class ETSCNN(nn.Module):
     """
-    Encoded Template Convolutional Network (ETCNet) is a neural network architecture based on the usage of a
-    pretrained VAE which encodes a given template and uses its encoding as weights for the first convolution of a
-    ResNet.
+    Encoded Template Siamese Convolutional Neural Network (ETSCNN) is a neural network architecture based on the usage
+    of a pretrained VAE which encodes a given template and uses its encoding as weights for the first convolution of a
+    ResNet. Then it uses the properties of Siamese NN to pass both inputs through the network.
     """
 
     def __init__(self, output_size=10):
-        super(ETCNet, self).__init__()
+        super(ETSCNN, self).__init__()
 
         self.vae = ConvVAE()
         for p in self.vae.parameters():
@@ -54,9 +54,14 @@ class ETCNet(nn.Module):
         template_weights = template_weights[0].repeat(3, 1, 1, 1)
         template_weights = template_weights.permute(1, 0, 2, 3)
         self.resnet_model.conv1.weight = torch.nn.Parameter(template_weights, requires_grad=False)
+
         x = self.resnet_model(x)
-        x = self.output(x)
-        return x
+
+        x_object = self.resnet_model(x_object)
+
+        x_joined = torch.abs(x - x_object)
+        x_joined = self.output(x_joined)
+        return x_joined
 
     def load_vae(self, path):
         self.vae.load_state_dict(torch.load(path))

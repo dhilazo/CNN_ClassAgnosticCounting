@@ -6,6 +6,7 @@ from torch.utils.data import random_split, DataLoader
 
 from datasets.saved_cifar10_count_dataset import SavedCIFAR10CountDataset
 from models.etcnet_model import ETCNet
+from models.etscnn_model import ETSCNN
 from trainer import Trainer
 from utils import system
 
@@ -24,8 +25,8 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'test'
-    network_model = ETCNet
+    run_name = 'ETSCNN'
+    network_model = ETSCNN
     epochs = 100
     image_grid_distribution = (3, 3)
     batch_size = 16
@@ -50,9 +51,9 @@ if __name__ == "__main__":
 
     model = network_model(output_size=1)
     model = model.to(device)
-    if isinstance(model, ETCNet):
-        model.load_vae(
-            ['./trained_models/ConvVAE_r.pt', './trained_models/ConvVAE_g.pt', './trained_models/ConvVAE_b.pt'])
+    if isinstance(model, ETCNet) or isinstance(model, ETSCNN):
+        model.load_vae('./trained_models/ConvVAE.pt')
+
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
