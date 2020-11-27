@@ -41,3 +41,8 @@ def open_image(path):
 def thumbnail_image(image, final_shape):
     image.thumbnail(final_shape, Image.ANTIALIAS)
     return image
+
+
+def paste_image(background, foreground, center):
+    background.paste(foreground, center, foreground)
+    return background

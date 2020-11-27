@@ -3,20 +3,21 @@ import torchvision.transforms as transforms
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
-from datasets.cifar10_count_dataset import CIFAR10CountDataset
+from datasets.saved_cifar10_count_dataset import SavedCIFAR10CountDataset
+from models.etcnet_model import ETCNet
 from trainer import Trainer
-from models.siamese_resnet_model import SiameseResNet
 
 image_grid_distribution = (3, 3)
 transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-test_set = CIFAR10CountDataset('./data/CIFAR10', image_grid_distribution, train=False, transformations=transform)
+data_root = './data/CIFAR10Count'
+test_set = SavedCIFAR10CountDataset(data_root, train=False, transform=transform)
 test_loader = DataLoader(test_set, batch_size=32, shuffle=False, num_workers=0)
 
-model = SiameseResNet(output_size=1)
-model.load_state_dict(torch.load("./trained_models/SiameseResNet_Resize.pt"))
+model = ETCNet(output_size=1)
+model.load_state_dict(torch.load("./trained_models/ETCNet_batch.pt"))
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)

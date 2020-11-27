@@ -28,7 +28,7 @@ class Trainer:
             train_loss = []
 
             loss_count = 0
-            for i, data in enumerate(train_loader, 0):
+            for i, data in enumerate(train_loader):
                 # get the inputs; data is a list of [inputs, labels]
                 image_grids, templates, counts = data
 
