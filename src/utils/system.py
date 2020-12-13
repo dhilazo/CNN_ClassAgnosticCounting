@@ -14,3 +14,7 @@ def join_path(path, *paths):
 
 def list_files(path):
     return os.listdir(path)
+
+
+def file_exists(path):
+    return os.path.isfile(path)

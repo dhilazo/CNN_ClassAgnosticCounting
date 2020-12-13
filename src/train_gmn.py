@@ -8,7 +8,7 @@ from utils.system import join_path, create_dirs
 
 
 class Trainer_GMN:
-    def __init__(self, model, criterion, optimizer, run_name, device=torch.device('cpu')):
+    def __init__(self, model, criterion, optimizer, run_name, device=torch.device('cpu'), init_epoch=0):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -19,8 +19,11 @@ class Trainer_GMN:
         self.train_writer = SummaryWriter(join_path(logs_path, 'train'))
         self.val_writer = SummaryWriter(join_path(logs_path, 'val'))
 
+        self.init_epoch = init_epoch
+
     def train(self, epochs, train_loader, val_loader, batch_report=2000):
-        for epoch in range(epochs):  # loop over the dataset multiple times
+        torch.autograd.set_detect_anomaly(True)
+        for epoch in range(self.init_epoch + 1, epochs):  # loop over the dataset multiple times
             if torch.cuda.is_available():
                 torch.cuda.synchronize(self.device)
             since_epoch = time.time()
@@ -58,6 +61,12 @@ class Trainer_GMN:
 
             val_loss = self.quick_validate(val_loader)
             torch.save(self.model.state_dict(), './trained_models/' + self.run_name + '_batch.pt')
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'loss': val_loss,
+            }, './trained_models/checkpoints/' + self.run_name + '_checkpoint.pth')
 
             train_mean_loss = np.mean(train_loss)
             val_mean_loss = np.mean(val_loss)

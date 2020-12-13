@@ -19,11 +19,11 @@ if __name__ == "__main__":
 
     network_model = GenericMatchingNetwork
     model = network_model(output_matching_size=(255 // 4, 255 // 4))
-    model.load_state_dict(torch.load("./trained_models/GMN_batch.pt"))
+    model.load_state_dict(torch.load("./trained_models/GMN_20_batch.pt"))
     # model = model.to(device)
     model.eval()
 
-    image, template, ground_truth, count  = val_set[1]
+    image, template, ground_truth, count = val_set[1]
     images = torch.reshape(image, (1, image.shape[-3], image.shape[-2], image.shape[-1]))
     templates = torch.reshape(template, (1, template.shape[-3], template.shape[-2], template.shape[-1]))
 

@@ -7,9 +7,10 @@ from torch.utils.data import DataLoader
 from datasets.ilsvrc_dataset import ILSVRC
 from models.etcnet_model import ETCNet
 from models.etscnn_model import ETSCNN
-from models.gmn import GenericMatchingNetwork
+from models.siamese_gmn import SiameseGenericMatchingNetwork
 from train_gmn import Trainer_GMN
 from utils import system
+from utils.system import file_exists
 
 
 def save_template(train_loader, classes):
@@ -26,11 +27,11 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'GMN_short'
-    network_model = GenericMatchingNetwork
+    run_name = 'SiameseGMN_final'
+    network_model = SiameseGenericMatchingNetwork
     epochs = 100
     image_shape = (255, 255)
-    batch_size = 16
+    batch_size = 256
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -38,8 +39,8 @@ if __name__ == "__main__":
 
     print("Creating DataLoaders.", flush=True)
     data_root = './data/ILSVRC/ILSVRC2015'
-    train_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.8, train=True, transform=transform)
-    val_set = ILSVRC(data_root, image_shape=image_shape, train=False, transform=transform)
+    train_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=True, transform=transform)
+    val_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=False, transform=transform)
 
     # train_len = len(train_set)
     # train_set, val_set = random_split(train_set, [int(train_len * 0.8), int(train_len * 0.2)])
@@ -58,8 +59,21 @@ if __name__ == "__main__":
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
+    init_epoch = 0
+    model = nn.DataParallel(model)  # If the saved model is a dataparallel already, otherwise do after the if
+    if file_exists('./trained_models/checkpoints/' + run_name + '_checkpoint.pth'):
+        print("Loading checkpoint.", flush=True)
+        checkpoint = torch.load('./trained_models/checkpoints/' + run_name + '_checkpoint.pth')
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        init_epoch = checkpoint['epoch']
+
+        model.train()
+
     system.create_dirs('trained_models')
-    trainer = Trainer_GMN(model, criterion, optimizer, run_name, device=device)
+    system.create_dirs('trained_models/checkpoints')
+
+    trainer = Trainer_GMN(model, criterion, optimizer, run_name, device=device, init_epoch=init_epoch)
     trainer.train(epochs, train_loader, val_loader)
 
     torch.save(model.state_dict(), './trained_models/' + run_name + '.pt')
