@@ -22,24 +22,22 @@ class Annotation:
     def __init__(self, filename):
         self.bounding_boxes = []
         self.centers = []
-        self.get_bounding_box_from_xml(filename)
+        self.get_bounding_box_from_txt(filename)
 
-    def get_bounding_box_from_xml(self, filename):
-        mytree = ET.parse(filename)
-        root = mytree.getroot()
-        for box in root.iter('object'):
-            xmax = int(box.find('bndbox').find('xmax').text)
-            xmin = int(box.find('bndbox').find('xmin').text)
-            ymax = int(box.find('bndbox').find('ymax').text)
-            ymin = int(box.find('bndbox').find('ymin').text)
+    def get_bounding_box_from_txt(self, filename):
+        with open(filename, 'r') as anno_file:
+            lines = anno_file.readlines()
+        for line in lines:
+            xmin, ymin, xmax, ymax = line.split()[:-1]
+            xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
             self.bounding_boxes.append([(xmin, ymin), (xmax, ymax)])
             self.centers.append(((xmax + xmin) / 2, (ymax + ymin) / 2))
 
 
-class ILSVRC(Dataset):
+class CARPK(Dataset):
     """
-    The ILSVRC dataset is a dataset from ImageNet2015 which contains video frames and the annotation of the bounding
-     boxes contained in it.
+    The CARPK dataset is an annotated dataset which contains drone captured images from parking lots. It offers the
+    train, val and test splits for the images and annotations.
 
     Args:
         - root (string): Root directory of dataset.
@@ -54,42 +52,36 @@ class ILSVRC(Dataset):
     """
 
     def __init__(self, root, image_shape=None, data_percentage=1, train=True, transform=None):
-        self.subset_folder = 'train' if train else 'val'
-        self.data_root = join_path(root, 'Data', 'VID', self.subset_folder)
-        self.anno_root = join_path(root, 'Annotations', 'VID', self.subset_folder)
+        self.subset_folder = 'train' if train else 'test'
+        self.image_root = join_path(root, 'Images')
+        self.anno_root = join_path(root, 'Annotations')
+        self.image_sets_file = join_path(root, 'ImageSets', self.subset_folder + '.txt')
         self.image_shape = image_shape
         self.transform = transform
         self.size = 0
-        self.folder_size = []
-        for folder in list_files(self.data_root):
-            images = list_files(join_path(self.data_root, folder))
-            self.size += len(images)
-            self.folder_size.append(self.size)
-        self.size = int(self.size * data_percentage)
+        self.files = []
+        with open(self.image_sets_file, 'r') as image_sets_file:
+            self.files = image_sets_file.read().splitlines()
+
+        self.size = len(self.files)
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, index):
-        i = 0
-        last_length = 0
-        for i, files_length in enumerate(self.folder_size):
-            if index < files_length:
-                index -= last_length
-                break
-            last_length = files_length
+        file = self.files[index]
 
-        folder_image_path = join_path(self.data_root, list_files(self.data_root)[i])
-        folder_anno_path = join_path(self.anno_root, list_files(self.data_root)[i])
+        image_file_path = join_path(self.image_root, file + '.png')
+        anno_file_path = join_path(self.anno_root, file + '.txt')
 
-        im = Image.open(join_path(folder_image_path, list_files(folder_image_path)[index]))
-        annotations = Annotation(join_path(folder_anno_path, list_files(folder_anno_path)[index]))
+        im = Image.open(image_file_path)
+        annotations = Annotation(anno_file_path)
         if self.image_shape is None:
             size = im.size
         else:
             size = self.image_shape
         size = im.size
-        #size = (size[0] // 4, size[1] // 4)
+        # size = (size[0] // 4, size[1] // 4)
         ground_truth = Image.new('L', size)
         template_box = None
         max_area = 0
@@ -108,8 +100,8 @@ class ILSVRC(Dataset):
             gaussian = gaussian.astype(np.uint8)
             gaussian = Image.fromarray(gaussian, mode='L')
             gaussian_center = (
-            int((gaussian_center[0] * size[0] / im.size[0]) - gaussian.size[0] // 2),
-            int((gaussian_center[1] * size[1] / im.size[1]) - gaussian.size[1] // 2))
+                int((gaussian_center[0] * size[0] / im.size[0]) - gaussian.size[0] // 2),
+                int((gaussian_center[1] * size[1] / im.size[1]) - gaussian.size[1] // 2))
             ground_truth = paste_image(ground_truth, gaussian, gaussian_center)
         # ground_truth.show()
         if template_box is not None:

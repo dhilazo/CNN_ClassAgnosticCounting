@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import resnet50
@@ -29,5 +30,8 @@ class DoubleInputNet(nn.Module):
         x = self.model(x)
         return x
 
-
-net = DoubleInputNet()
+if __name__ == '__main__':
+    model = DoubleInputNet(output_size=1)
+    data = torch.zeros(2, 3, 288, 288)
+    template = torch.zeros(2, 3, 96, 96)
+    assert model(data, template)[0].shape == 1

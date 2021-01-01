@@ -5,8 +5,11 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from datasets.ilsvrc_dataset import ILSVRC
+from models.adapted_gmn import AdaptedGenericMatchingNetwork
 from models.etcnet_model import ETCNet
 from models.etscnn_model import ETSCNN
+from models.gmn_etcnet import GMNETCNet
+from models.gmn_etscnn import GmnETSCNN
 from models.siamese_gmn import SiameseGenericMatchingNetwork
 from train_gmn import Trainer_GMN
 from utils import system
@@ -27,11 +30,11 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'SiameseGMN_final'
-    network_model = SiameseGenericMatchingNetwork
+    run_name = 'testtest'
+    network_model = GMNETCNet
     epochs = 100
     image_shape = (255, 255)
-    batch_size = 256
+    batch_size = 1
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -53,7 +56,7 @@ if __name__ == "__main__":
 
     model = network_model(output_matching_size=(255 // 4, 255 // 4))
     model = model.to(device)
-    if isinstance(model, ETCNet) or isinstance(model, ETSCNN):
+    if isinstance(model, ETCNet) or isinstance(model, ETSCNN) or isinstance(model, GMNETCNet):
         model.load_vae('./trained_models/ConvVAE.pt')
 
     criterion = nn.MSELoss()
@@ -67,6 +70,7 @@ if __name__ == "__main__":
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         init_epoch = checkpoint['epoch']
+        print("Init epoch:", init_epoch, flush=True)
 
         model.train()
 

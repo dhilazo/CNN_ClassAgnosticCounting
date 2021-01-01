@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from datasets.ilsvrc_dataset import ILSVRC
+from models.cnn_vae import ConvVAE
 from models.cnn_vae_gmn import ConvVAEGMN
 from utils import system
 from utils.klmse import MSEKLDLoss
@@ -128,7 +129,7 @@ class VAETrainer:
 
 
 if __name__ == "__main__":
-    run_name = 'ConvVAE_ILSVRC'
+    run_name = 'ConvVAE_firstConv_GMN'
     epochs = 100
     batch_size = 64
     image_shape = (255, 255)
@@ -148,21 +149,23 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=0)
     # test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
-    model = ConvVAEGMN()
+    model = ConvVAE()
     model = model.to(device)
 
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     init_epoch = 0
+    # model = nn.DataParallel(model)
     if file_exists('./trained_models/checkpoints/' + run_name + '_checkpoint.pth'):
+        print("Loading checkpoint.", flush=True)
         checkpoint = torch.load('./trained_models/checkpoints/' + run_name + '_checkpoint.pth')
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         init_epoch = checkpoint['epoch']
+        print("Init epoch:", init_epoch, flush=True)
 
         model.train()
-    # model = nn.DataParallel(model)
 
     system.create_dirs('trained_models')
     system.create_dirs('trained_models/checkpoints')

@@ -1,13 +1,13 @@
+import random
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-from torchvision import datasets
 
 from datasets.ilsvrc_dataset import ILSVRC
 from models.cnn_vae import ConvVAE
-from models.cnn_vae_gmn import ConvVAEGMN
 
 if __name__ == "__main__":
     image_shape = (255, 255)
@@ -17,12 +17,14 @@ if __name__ == "__main__":
 
     test_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=False, transform=transform)
 
-    model = ConvVAEGMN()
-    model.load_state_dict(torch.load("./trained_models/ConvVAE_ILSVRC_batch.pt"))
+    model = ConvVAE()
+    model.load_state_dict(torch.load("./trained_models/ConvVAE_firstConv_GMN_batch.pt"))
     model.eval()
 
-    images, templates, ground_truth, count = test_set[1]
-    templates = torch.reshape(templates, (1, templates.shape[-3], templates.shape[-2], templates.shape[-1]))
+    index = random.randint(0, len(test_set))
+    images, _, ground_truth, count, resized_template = test_set[index]
+    templates = torch.reshape(resized_template,
+                              (1, resized_template.shape[-3], resized_template.shape[-2], resized_template.shape[-1]))
     decoded, _, _ = model(templates)
 
     im1 = transforms.ToPILImage()(templates[0]).convert("RGB")
@@ -32,7 +34,7 @@ if __name__ == "__main__":
     mu, logvar = model.encoder(templates)
     z = model.reparametrize(mu, logvar)
     encoded = z[0].detach().numpy()
-    #encoded = torch.reshape(z, (8, 8, z.shape[-2], z.shape[-1]))
+    # encoded = torch.reshape(z, (8, 8, z.shape[-2], z.shape[-1]))
 
     # Plot
     fig, axs = plt.subplots(8, 8, figsize=(10, 10), facecolor='w', edgecolor='k')

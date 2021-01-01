@@ -33,17 +33,17 @@ class Trainer_GMN:
             loss_count = 0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]
-                images, templates, ground_truth, count = data
+                images, templates, ground_truth, count, resized_template = data
 
                 images = images.to(self.device)
                 templates = templates.to(self.device)
                 ground_truth = ground_truth.to(self.device)
-
+                resized_template = resized_template.to(self.device)
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
 
                 # forward + backward + optimize
-                outputs = self.model(images, templates)
+                outputs = self.model(images, templates, resized_template)
 
                 loss = self.criterion(outputs, ground_truth)
                 loss.backward()
@@ -86,14 +86,15 @@ class Trainer_GMN:
         with torch.no_grad():
             epoch_val_loss = []
             for data in val_loader:
-                images, templates, ground_truth, count = data
+                images, templates, ground_truth, count, resized_template = data
 
                 images = images.to(self.device)
                 templates = templates.to(self.device)
                 ground_truth = ground_truth.to(self.device)
+                resized_template = resized_template.to(self.device)
 
                 # forward + backward + optimize
-                outputs = self.model(images, templates)
+                outputs = self.model(images, templates, resized_template)
 
                 loss = self.criterion(outputs, ground_truth)
 
@@ -109,14 +110,15 @@ class Trainer_GMN:
         total_batches = 0
         with torch.no_grad():
             for data in test_loader:
-                images, templates, ground_truth, count = data
+                images, templates, ground_truth, count, resized_template = data
 
                 images = images.to(self.device)
                 templates = templates.to(self.device)
                 ground_truth = ground_truth.to(self.device)
+                resized_template = resized_template.to(self.device)
 
                 # forward + backward + optimize
-                outputs = self.model(images, templates)
+                outputs = self.model(images, templates, resized_template)
 
                 loss = self.criterion(outputs, ground_truth)
 
