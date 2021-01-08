@@ -5,12 +5,9 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from datasets.ilsvrc_dataset import ILSVRC
-from models.adapted_gmn import AdaptedGenericMatchingNetwork
 from models.etcnet_model import ETCNet
 from models.etscnn_model import ETSCNN
 from models.gmn_etcnet import GMNETCNet
-from models.gmn_etscnn import GmnETSCNN
-from models.siamese_gmn import SiameseGenericMatchingNetwork
 from train_gmn import Trainer_GMN
 from utils import system
 from utils.system import file_exists
@@ -30,11 +27,11 @@ def save_template(train_loader, classes):
 
 
 if __name__ == "__main__":
-    run_name = 'testtest'
+    run_name = 'GMNETCNet_CIFAR'
     network_model = GMNETCNet
     epochs = 100
     image_shape = (255, 255)
-    batch_size = 1
+    batch_size = 256
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 

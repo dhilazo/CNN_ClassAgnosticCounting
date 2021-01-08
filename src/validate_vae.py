@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
+from torchvision import datasets
 
 from datasets.ilsvrc_dataset import ILSVRC
 from models.cnn_vae import ConvVAE
@@ -18,16 +19,25 @@ if __name__ == "__main__":
     test_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=False, transform=transform)
 
     model = ConvVAE()
-    model.load_state_dict(torch.load("./trained_models/ConvVAE_firstConv_GMN_batch.pt"))
+    model.load_state_dict(torch.load("./trained_models/ConvVAE.pt"))
     model.eval()
+    model2 = ConvVAE()
+    model2.load_state_dict(torch.load("./trained_models/ConvVAE_firstConv_GMN_batch.pt"))
+    model2.eval()
 
     index = random.randint(0, len(test_set))
+    print(index)
     images, _, ground_truth, count, resized_template = test_set[index]
     templates = torch.reshape(resized_template,
                               (1, resized_template.shape[-3], resized_template.shape[-2], resized_template.shape[-1]))
     decoded, _, _ = model(templates)
 
     im1 = transforms.ToPILImage()(templates[0]).convert("RGB")
+    im2 = transforms.ToPILImage()(decoded[0]).convert("RGB")
+    # im1.save('../../test.jpg')
+    # im2.save('../../test_decoded.jpg')
+    Image.fromarray(np.hstack((np.array(im1), np.array(im2)))).show()
+    decoded, _, _ = model2(templates)
     im2 = transforms.ToPILImage()(decoded[0]).convert("RGB")
     Image.fromarray(np.hstack((np.array(im1), np.array(im2)))).show()
 

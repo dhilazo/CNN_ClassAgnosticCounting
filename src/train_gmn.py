@@ -8,7 +8,7 @@ from utils.system import join_path, create_dirs
 
 
 class Trainer_GMN:
-    def __init__(self, model, criterion, optimizer, run_name, device=torch.device('cpu'), init_epoch=0):
+    def __init__(self, model, criterion, optimizer, run_name, device=torch.device('cpu'), init_epoch=-1):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -24,8 +24,8 @@ class Trainer_GMN:
     def train(self, epochs, train_loader, val_loader, batch_report=2000):
         torch.autograd.set_detect_anomaly(True)
         for epoch in range(self.init_epoch + 1, epochs):  # loop over the dataset multiple times
-            if torch.cuda.is_available():
-                torch.cuda.synchronize(self.device)
+            # if torch.cuda.is_available():
+            #     torch.cuda.synchronize(self.device)
             since_epoch = time.time()
             running_loss = 0.0
             train_loss = []
@@ -71,8 +71,8 @@ class Trainer_GMN:
             train_mean_loss = np.mean(train_loss)
             val_mean_loss = np.mean(val_loss)
 
-            if torch.cuda.is_available():
-                torch.cuda.synchronize(self.device)
+            # if torch.cuda.is_available():
+            #     torch.cuda.synchronize(self.device)
             print(f'Train loss: {train_mean_loss} Val loss: {val_mean_loss}', flush=True)
             print(f'Epoch time: {round(time.time() - since_epoch, 2)}s', flush=True)
 

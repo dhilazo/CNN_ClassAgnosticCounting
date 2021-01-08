@@ -1,11 +1,13 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from scipy import ndimage
 from torchvision.models import resnet50
 from torchvision.models.resnet import Bottleneck
 
 from models.cnn_vae import ConvVAE
-from utils.image import resize_image
 
 
 class MyConvTranspose2d(nn.Module):
@@ -124,3 +126,66 @@ class GMNETCNet(nn.Module):
 
     def load_vae(self, path):
         self.vae.load_state_dict(torch.load(path))
+
+    @staticmethod
+    def get_count(matrix, plot=False):
+        footprint_3x3 = np.ones((3, 3))
+        footprint_3x3[0, 0] = 0
+        footprint_3x3[2, 0] = 0
+        footprint_3x3[0, 2] = 0
+        footprint_3x3[2, 2] = 0
+
+        footprint_7x7 = np.ones((7, 7))
+        footprint_7x7[0, 0] = 0
+        footprint_7x7[6, 0] = 0
+        footprint_7x7[0, 6] = 0
+        footprint_7x7[6, 6] = 0
+
+        # Small maximum analysis
+        data_max = ndimage.maximum_filter(matrix, footprint=footprint_3x3)
+        maxima = (matrix == data_max)
+        data_min = ndimage.minimum_filter(matrix, footprint=footprint_3x3)
+        diff = ((data_max - data_min) > (matrix.max() / 3))
+        maxima[diff == 0] = 0
+
+        labeled, num_objects = ndimage.label(maxima)
+        slices = ndimage.find_objects(labeled)
+        x, y = [], []
+        for dy, dx in slices:
+            x_center = (dx.start + dx.stop - 1) // 2
+            x.append(x_center)
+            y_center = (dy.start + dy.stop - 1) // 2
+            y.append(y_center)
+
+        coordinates_small = list(zip(x, y))
+
+        # Big maximum analysis
+        data_max = ndimage.maximum_filter(matrix, footprint=footprint_7x7)
+        maxima = (matrix == data_max)
+        data_min = ndimage.minimum_filter(matrix, footprint=footprint_7x7)
+        diff = ((data_max - data_min) > (matrix.max() / 3))
+        maxima[diff == 0] = 0
+
+        labeled, num_objects = ndimage.label(maxima)
+        slices = ndimage.find_objects(labeled)
+        x, y = [], []
+        for dy, dx in slices:
+            x_center = (dx.start + dx.stop - 1) // 2
+            x.append(x_center)
+            y_center = (dy.start + dy.stop - 1) // 2
+            y.append(y_center)
+
+        coordinates_big = list(zip(x, y))
+
+        coordinates = np.array(
+            list(set(coordinates_big + coordinates_small)))
+
+        if plot:
+            plt.figure()
+            plt.imshow(matrix)
+            plt.autoscale(False)
+            plt.plot(coordinates[:, 0], coordinates[:, 1], 'g+')
+            plt.title("Located instances")
+            plt.show()
+
+        return len(coordinates)

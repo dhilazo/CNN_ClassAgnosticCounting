@@ -130,10 +130,10 @@ class ILSVRC(Dataset):
 
             size = (self.image_shape[0] // 4, self.image_shape[1] // 4)
             ground_truth = thumbnail_image(ground_truth, size)
-            padding = Image.new('RGBA', size)
+            padding = Image.new('L', size)
             x = int(padding.size[0] / 2 - ground_truth.size[0] / 2)
             y = int(padding.size[1] / 2 - ground_truth.size[1] / 2)
-            ground_truth = ground_truth.convert('RGBA')
+            ground_truth = ground_truth.convert('L')
             ground_truth = paste_image(padding, ground_truth, (x, y)).convert('L')
         # im.show()
         # template.show()
