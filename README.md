@@ -27,3 +27,5 @@ The datasets developed in this project are:
 Spatial density results for each tested model where the white areas represent the regions where the features of the template were detected, and the red crosses are the local maximum counts.
 
 <p align="center"><img width="500" src="./img/ILSVRC_predictions332.png" /></p>
+
+As can be seen, not all evaluated models worked fine but we achieved to improve the State of the Art with the Siamese GMN network.
