@@ -12,20 +12,6 @@ from train_gmn import Trainer_GMN
 from utils import system
 from utils.system import file_exists
 
-
-def save_template(train_loader, classes):
-    found = []
-    # get some random training images
-    dataiter = iter(train_loader)
-    while len(found) != len(classes):
-        images, labels = dataiter.next()
-        for img, label in zip(images, labels):
-            if label not in found:
-                found.append(label)
-                # Save and remove
-                torch.save(img, './data/templates/' + classes[label] + '.pt')
-
-
 if __name__ == "__main__":
     run_name = 'GMNETCNet_CIFAR'
     network_model = GMNETCNet
@@ -42,12 +28,8 @@ if __name__ == "__main__":
     train_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=True, transform=transform)
     val_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=False, transform=transform)
 
-    # train_len = len(train_set)
-    # train_set, val_set = random_split(train_set, [int(train_len * 0.8), int(train_len * 0.2)])
-
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=0)
-    # test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
     print("DataLoaders created.", flush=True)
 
@@ -78,5 +60,3 @@ if __name__ == "__main__":
     trainer.train(epochs, train_loader, val_loader)
 
     torch.save(model.state_dict(), './trained_models/' + run_name + '.pt')
-
-    # trainer.evaluate(test_loader)

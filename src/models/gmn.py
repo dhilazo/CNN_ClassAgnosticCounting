@@ -135,10 +135,11 @@ class GenericMatchingNetwork(nn.Module):
 
         if plot:
             plt.figure()
-            plt.imshow(matrix)
+            plt.imshow(matrix, cmap="gray")
+            plt.axis('off')
             plt.autoscale(False)
-            plt.plot(coordinates[:, 0], coordinates[:, 1], 'ro')
-            plt.title("Located instances")
+            plt.plot(coordinates[:, 0], coordinates[:, 1], 'rx')
+            # plt.title("Located instances")
             plt.show()
 
         return len(coordinates)
