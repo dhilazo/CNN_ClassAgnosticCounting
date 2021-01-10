@@ -12,16 +12,18 @@ This master thesis proposes what we believe is the best approach for achieving c
 The datasets developed in this project are:
  - Count CIFAR10: A simple dataset for direct counting where the input is an image grid formed with samples from the CIFAR10 dataset and a template as reference of the object to be counted.
  
- <div style="text-align:center"><img src="./img/Count_CIFAR10.PNG" /></div>
+ <p align="center"><img src="./img/Count_CIFAR10.PNG" /></p>
  
  - ILSVRC2015: A transformation of the dataset from the ImageNet challenge to fit a spatial density counting task.
 
- <div style="text-align:center"><img src="./img/ILSVRC2015.PNG" /></div>
+ <p align="center"><img src="./img/ILSVRC2015.PNG" /></p>
  
  - CARPK: A transformation of the CARPK dataset to fit a spatial density counting task.
  
- <div style="text-align:center"><img src="./img/CARPK.PNG" /></div>
+ <p align="center"><img src="./img/CARPK.PNG" /></p>
  
  ## Spatial density results
- 
-<div style="text-align:center"><img src="./img/ILSVRC_predictions332.png" /></div>
+
+Spatial density results for each tested model where the white areas represent the regions where the features of the template were detected, and the red crosses are the local maximum counts.
+
+<p align="center"><img width="500" src="./img/ILSVRC_predictions332.png" /></p>
