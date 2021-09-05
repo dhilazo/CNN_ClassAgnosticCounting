@@ -1,60 +1,84 @@
+import argparse
 import random
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from PIL import Image
-from torchvision import datasets
 
-from datasets.ilsvrc_dataset import ILSVRC
-from models.cnn_vae import ConvVAE
+from datasets import SpatialDensityCountingDataset, dataset_dict
+from models import vae_model_dict
+from utils.decorator import counting_script
 
-if __name__ == "__main__":
-    image_shape = (255, 255)
-    data_root = './data/ILSVRC/ILSVRC2015'
+
+@counting_script
+def validate_vae(parser: Optional[argparse.ArgumentParser] = None):
+    parser = argparse.ArgumentParser(
+        description="Plots the output density map of a trained counting model.", parents=[parser]
+    )
+    parser.add_argument(
+        "-v",
+        "--vae-model",
+        type=str,
+        default="ConvVAE",
+        choices=vae_model_dict.keys(),
+        help="VAE model to validate",
+    )
+    parser.add_argument(
+        "-vp", "--vae-path", type=str, default="../trained_models/ConvVAE.pt", help="Path to pretrained VAE weights"
+    )
+    args = parser.parse_args()
+
+    network_model = vae_model_dict[args.vae_model]
+    model_name = network_model.__name__
+    dataset = dataset_dict[args.dataset]
+    image_shape = (args.image_shape, args.image_shape)
+    device = torch.device("cuda:0" if not args.cpu and torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose([transforms.ToTensor()])
 
-    test_set = ILSVRC(data_root, image_shape=image_shape, data_percentage=0.5, train=False, transform=transform)
+    if issubclass(dataset, SpatialDensityCountingDataset):
+        kwargs = dict(root=args.data_path, image_shape=image_shape, transform=transform)
+    else:
+        kwargs = dict(root=args.data_path, transform=transform)
+    test_set = dataset(train=False, **kwargs)
 
-    model = ConvVAE()
-    model.load_state_dict(torch.load("./trained_models/ConvVAE.pt"))
+    model = network_model()
+    model.load_state_dict(torch.load(args.vae_path, map_location=device))
     model.eval()
-    model2 = ConvVAE()
-    model2.load_state_dict(torch.load("./trained_models/ConvVAE_firstConv_GMN_batch.pt"))
-    model2.eval()
 
     index = random.randint(0, len(test_set))
-    print(index)
-    images, _, ground_truth, count, resized_template = test_set[index]
-    templates = torch.reshape(resized_template,
-                              (1, resized_template.shape[-3], resized_template.shape[-2], resized_template.shape[-1]))
-    decoded, _, _ = model(templates)
+    if issubclass(dataset, SpatialDensityCountingDataset):
+        _, _, _, _, resized_template = test_set[index]
+        template = torch.reshape(resized_template, (1, *resized_template.shape[-3:]))
+    else:
+        _, templates, _ = test_set[index]
+        template = torch.reshape(templates[0], (1, *templates[0].shape[-3:]))
 
-    im1 = transforms.ToPILImage()(templates[0]).convert("RGB")
-    im2 = transforms.ToPILImage()(decoded[0]).convert("RGB")
-    # im1.save('../../test.jpg')
-    # im2.save('../../test_decoded.jpg')
-    Image.fromarray(np.hstack((np.array(im1), np.array(im2)))).show()
-    decoded, _, _ = model2(templates)
-    im2 = transforms.ToPILImage()(decoded[0]).convert("RGB")
-    Image.fromarray(np.hstack((np.array(im1), np.array(im2)))).show()
+    decoded, mu, _ = model(template)
 
-    mu, logvar = model.encoder(templates)
-    z = model.reparametrize(mu, logvar)
-    encoded = z[0].detach().numpy()
-    # encoded = torch.reshape(z, (8, 8, z.shape[-2], z.shape[-1]))
+    template = np.moveaxis(template[0].detach().numpy(), 0, -1)
+    decoded = np.moveaxis(decoded[0].detach().numpy(), 0, -1)
 
     # Plot
-    fig, axs = plt.subplots(8, 8, figsize=(10, 10), facecolor='w', edgecolor='k')
-    fig.subplots_adjust(hspace=.1, wspace=.0005)
+    fig, axs = plt.subplots(1, 2, figsize=(10, 8), facecolor="w", edgecolor="k")
 
     axs = axs.ravel()
-    plt.axis('off')
-    for i in range(64):
-        # axs[i].contourf(encoded[i], 5, cmap=plt.cm.Oranges)
-        axs[i].imshow(encoded[i], cmap=plt.cm.Greys)
-        axs[i].set_axis_off()
-    plt.suptitle('Encoded features')
+    plt.axis("off")
+
+    axs[0].imshow(template)
+    axs[0].set_axis_off()
+    axs[0].set_title("Original image")
+
+    axs[1].imshow(decoded)
+    axs[1].set_axis_off()
+    axs[1].set_title("Decoded")
+
+    plt.suptitle(f"{model_name}")
+
     plt.show()
+
+
+if __name__ == "__main__":
+    validate_vae()

@@ -1,56 +1,114 @@
+import argparse
+from typing import Optional
+
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from torch import nn, optim
+from torch import nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
-from datasets.saved_cifar10_count_dataset import SavedCIFAR10CountDataset
-from models.etcnet_model import ETCNet
-from models.etscnn_model import ETSCNN
-from models.model import DoubleInputNet
-from models.resnet import ResNet
-from models.siamese_resnet_model import SiameseResNet
+from datasets import dataset_dict
+from models import counting_model_dict
+from models.density_counting import density_counting_models
+from utils.count import count_local_maximums
+from utils.decorator import counting_script
 
-image_grid_distribution = (3, 3)
-transform = transforms.Compose([transforms.ToTensor()])
 
-data_root = './data/CIFAR10Count'
-test_set = SavedCIFAR10CountDataset(data_root, train=False, transform=transform)
-test_loader = DataLoader(test_set, batch_size=32, shuffle=False, num_workers=0)
+@counting_script
+def test_performance(parser: Optional[argparse.ArgumentParser] = None):
+    parser = argparse.ArgumentParser(
+        description="Tests the performance of a trained counting model with several metrics, "
+        "such as: MSE, MAE and Accuracy.",
+        parents=[parser],
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        type=str,
+        default="SiameseGMN",
+        choices=counting_model_dict.keys(),
+        help="Counting model",
+    )
+    parser.add_argument(
+        "-wp",
+        "--weights-path",
+        type=str,
+        default="../trained_models/SiameseGMN_batch.pt",
+        help="Path to trained weights",
+    )
+    args = parser.parse_args()
 
-#model = ResNet(output_size=1)
-# model = DoubleInputNet(output_size=1)
-# model = SiameseResNet(output_size=1)
-# model = ETCNet(output_size=1)
-model = ETSCNN(output_size=1)
-print(type(model).__name__, flush=True)
+    network_model = counting_model_dict[args.model]
+    dataset = dataset_dict[args.dataset]
+    image_shape = (args.image_shape, args.image_shape)
+    device = torch.device("cuda:0" if not args.cpu and torch.cuda.is_available() else "cpu")
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-model = model.to(device)
-# model = nn.DataParallel(model)  # If the saved model is a dataparallel already, otherwise do after the if
-# model.load_state_dict(torch.load("./trained_models/ResNet_batch.pt", map_location=device))
-# model.load_state_dict(torch.load("./trained_models/DoubleInputCount_ResNet_batch.pt", map_location=device))
-# model.load_state_dict(torch.load("./trained_models/SiameseResNet_Raw_final.pt", map_location=device))
-# model.load_state_dict(torch.load("./trained_models/ETCNet_batch.pt", map_location=device))
-model.load_state_dict(torch.load("./trained_models/ETSCNN_batch.pt", map_location=device))
+    transform = transforms.Compose([transforms.ToTensor()])
 
-model = model.to(device)
-mse_criterion = nn.MSELoss()
-mae_criterion = nn.L1Loss()
+    test_set = dataset(root=args.data_path, train=False, transform=transform)
+    test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
-model.eval()
+    if network_model in density_counting_models:
+        model = network_model(output_matching_size=(image_shape[0] // 4, image_shape[1] // 4))
+    else:
+        model = network_model(output_size=1)
 
-max_test_loss = 0
-test_accumulated_loss = 0
-total_batches = 0
-mse_losses = []
-mae_losses = []
-accuracies = []
+    try:
+        model.load_state_dict(torch.load(args.weights_path, map_location=device))
+    except RuntimeError:
+        model = nn.DataParallel(model)
+        model.load_state_dict(torch.load(args.weights_path))
+        if device == torch.device("cpu"):
+            model = model.module
 
-print(len(test_set), flush=True)
-with torch.no_grad():
-    for batch, data in enumerate(test_loader):
-        print(batch, flush=True)
+    model = model.to(device)
+    mse_criterion = nn.MSELoss()
+    mae_criterion = nn.L1Loss()
+
+    model.eval()
+    with torch.no_grad():
+        evaluate_func = (
+            evaluate_direct_count if network_model not in density_counting_models else evaluate_density_count
+        )
+        accuracies, mae_losses, mse_losses = evaluate_func(device, mae_criterion, model, mse_criterion, test_loader)
+    print("MSE Loss:", np.mean(mse_losses), flush=True)
+    print("MAE Loss:", np.mean(mae_losses), flush=True)
+    print("Avg Accuracy:", np.mean(accuracies) * 100, "%", flush=True)
+
+
+def evaluate_density_count(device, mae_criterion, model, mse_criterion, test_loader):
+    mse_losses = []
+    mae_losses = []
+    accuracies = []
+    for batch, data in tqdm(enumerate(test_loader), leave=False, desc="Evaluating batch"):
+        images, templates, _, count, resized_template = data
+
+        images = images.to(device)
+        templates = templates.to(device)
+        resized_template = resized_template.to(device)
+
+        correct = 0
+        outputs = model(images, templates, resized_template)
+        outputs = torch.FloatTensor(
+            [count_local_maximums(outputs[i].detach().cpu().numpy()[0]) for i in range(len(outputs))]
+        )
+        mse_losses.append(mse_criterion(outputs, count).item())
+        mae_losses.append(mae_criterion(outputs, count).item())
+
+        correct += sum(
+            np.around(np.reshape(outputs.cpu().numpy(), len(outputs)), decimals=0)
+            == np.reshape(count.cpu().numpy(), len(outputs))
+        )
+        accuracies.append(correct / len(images))
+    return accuracies, mae_losses, mse_losses
+
+
+def evaluate_direct_count(device, mae_criterion, model, mse_criterion, test_loader):
+    mse_losses = []
+    mae_losses = []
+    accuracies = []
+    for batch, data in tqdm(enumerate(test_loader), leave=False, desc="Evaluating batch"):
         image_grids, templates, counts = data
 
         image_grids = image_grids.to(device)
@@ -64,10 +122,13 @@ with torch.no_grad():
             mse_losses.append(mse_criterion(outputs, counts[:, i]).item())
             mae_losses.append(mae_criterion(outputs, counts[:, i]).item())
 
-            correct += sum(np.around(np.reshape(outputs.cpu().numpy(), len(outputs)), decimals=0) == np.reshape(
-                counts[:, i].cpu().numpy(), len(outputs)))
+            correct += sum(
+                np.around(np.reshape(outputs.cpu().numpy(), len(outputs)), decimals=0)
+                == np.reshape(counts[:, i].cpu().numpy(), len(outputs))
+            )
             accuracies.append(correct / len(image_grids))
+    return accuracies, mae_losses, mse_losses
 
-print("MSE Loss:", np.mean(mse_losses), flush=True)
-print("MAE Loss:", np.mean(mae_losses), flush=True)
-print("Avg Accuracy:", np.mean(accuracies) * 100, "%", flush=True)
+
+if __name__ == "__main__":
+    test_performance()
